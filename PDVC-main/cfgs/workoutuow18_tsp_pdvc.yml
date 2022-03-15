@@ -1,0 +1,9 @@
+id: workoutuow18_tsp_pdvc
+base_cfg_path: cfgs/anet_c3d_pdvc.yml
+visual_feature_type: ['tsp']
+visual_feature_folder: ['data/workoutuow18/features/tsp']
+invalid_video_json: []
+gt_file_for_eval: ['data/workoutuow18/captiondata/valid.json']
+#test_caption_file: ['data/workoutuow18/captiondata/test.json']
+#epoch: 50
+feature_dim: 512

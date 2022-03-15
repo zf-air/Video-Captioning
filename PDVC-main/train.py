@@ -5,8 +5,11 @@ from __future__ import print_function
 
 import json
 import time
-import torch
 import os
+
+#os.environ['CUDA_VISIBLE_DEVICES']= '1'
+
+import torch
 import sys
 import collections
 import numpy as np
@@ -30,14 +33,14 @@ from pdvc.pdvc import build
 from collections import OrderedDict
 
 def train(opt):
-    set_seed(opt.seed)
-    save_folder = build_floder(opt)
-    logger = create_logger(save_folder, 'train.log')
-    tf_writer = SummaryWriter(os.path.join(save_folder, 'tf_summary'))
+    set_seed(opt.seed)   #标记，代表设置的第几号种子，不同的种子固定的随机数组不同，让结果具有重复性
+    save_folder = build_floder(opt)   #创建保存结果的文件夹
+    logger = create_logger(save_folder, 'train.log')   #训练日志
+    tf_writer = SummaryWriter(os.path.join(save_folder, 'tf_summary'))   #事件文件夹
 
     if not opt.start_from:
         backup_envir(save_folder)
-        logger.info('backup evironment completed !')
+        logger.info('backup evironment completed !')     #备份环境 backup文件夹
 
     saved_info = {'best': {}, 'last': {}, 'history': {}, 'eval_history': {}}
 
@@ -48,7 +51,7 @@ def train(opt):
         with open(infos_path) as f:
             logger.info('Load info from {}'.format(infos_path))
             saved_info = json.load(f)
-            prev_opt = saved_info[opt.start_from_mode[:4]]['opt']
+            prev_opt = saved_info[opt.start_from_mode[:4]]['opt']      #取出最后一轮训练的配置信息
 
             exclude_opt = ['start_from', 'start_from_mode', 'pretrain']
             for opt_name in prev_opt.keys():
@@ -61,7 +64,7 @@ def train(opt):
     train_dataset = PropSeqDataset(opt.train_caption_file,
                                    opt.visual_feature_folder,
                                    opt.dict_file, True, 'gt',
-                                   opt)
+                                   opt)     #加载json文件、特征数据和字典   'gt'应该是指带有时间注释的
 
     val_dataset = PropSeqDataset(opt.val_caption_file,
                                  opt.visual_feature_folder,
@@ -75,16 +78,18 @@ def train(opt):
                             shuffle=False, num_workers=opt.nthreads, collate_fn=collate_fn)
 
     epoch = saved_info[opt.start_from_mode[:4]].get('epoch', 0)
+ #   epoch = saved_info[opt.start_from_mode[:4]].get('epoch', 0) + 1   #修改，防止批次错误 如果一个批次刚运行完，就要+1，如果没有则不加
     iteration = saved_info[opt.start_from_mode[:4]].get('iter', 0)
     best_val_score = saved_info[opt.start_from_mode[:4]].get('best_val_score', -1e5)
     val_result_history = saved_info['history'].get('val_result_history', {})
     loss_history = saved_info['history'].get('loss_history', {})
     lr_history = saved_info['history'].get('lr_history', {})
-    opt.current_lr = vars(opt).get('current_lr', opt.lr)
+    opt.current_lr = vars(opt).get('current_lr', opt.lr)   #从info.json中加载历史信息
 
     # Build model
 
     model, criterion, postprocessors = build(opt)
+    print(model)
     model.translator = train_dataset.translator
     model.train()
 
@@ -119,13 +124,14 @@ def train(opt):
 
     model.to(opt.device)
 
-    if opt.optimizer_type == 'adam':
+    if opt.optimizer_type == 'adam':      #默认的
         optimizer = optim.Adam(model.parameters(), lr=opt.lr, weight_decay=opt.weight_decay)
 
     elif opt.optimizer_type == 'adamw':
         optimizer = optim.AdamW(model.parameters(), lr=opt.lr, weight_decay=opt.weight_decay)
 
     milestone = [opt.learning_rate_decay_start + opt.learning_rate_decay_every * _ for _ in range(int((opt.epoch - opt.learning_rate_decay_start) / opt.learning_rate_decay_every))]
+    #学习率先持续8个批次，然后每3个批次*0.5
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestone, gamma=opt.learning_rate_decay_rate)
 
     if opt.start_from:
@@ -150,9 +156,9 @@ def train(opt):
         if True:
             # scheduled sampling rate update
             if epoch > opt.scheduled_sampling_start >= 0:
-                frac = (epoch - opt.scheduled_sampling_start) // opt.scheduled_sampling_increase_every
+                frac = (epoch - opt.scheduled_sampling_start) // opt.scheduled_sampling_increase_every  #0.5,1,1.5.....
                 opt.ss_prob = min(opt.basic_ss_prob + opt.scheduled_sampling_increase_prob * frac,
-                                  opt.scheduled_sampling_max_prob)
+                                  opt.scheduled_sampling_max_prob) # 前10个批次从0.025呈线性增长，直到为0.25，保持不变
                 model.caption_head.ss_prob = opt.ss_prob
 
             print('lr:{}'.format(float(opt.current_lr)))
@@ -193,7 +199,7 @@ def train(opt):
             if opt.device=='cuda':
                 torch.cuda.synchronize()
 
-            losses_log_every = int(len(train_loader) / 10)
+            losses_log_every = int(len(train_loader) / 10) #可以修改一下，进行一个批次再报，86个视频报一次  后续可以更改一下试试
 
             if opt.debug:
                 losses_log_every = 6
@@ -218,7 +224,7 @@ def train(opt):
                 bad_video_num = 0
                 torch.cuda.empty_cache()
 
-        # evaluation
+        # evaluation  到这了
         if (epoch % opt.save_checkpoint_every == 0) and (epoch >= opt.min_epoch_when_save):
 
             # Save model
@@ -229,7 +235,7 @@ def train(opt):
             if opt.save_all_checkpoint:
                 checkpoint_path = os.path.join(save_folder, 'model_iter_{}.pth'.format(iteration))
             else:
-                checkpoint_path = os.path.join(save_folder, 'model-last.pth')
+                checkpoint_path = os.path.join(save_folder, 'model-last.pth')  #只保留完整批次的模型
 
             torch.save(saved_pth, checkpoint_path)
 
@@ -238,15 +244,15 @@ def train(opt):
                                          'num{}_epoch{}.json'.format(
                                              len(val_dataset), epoch))
             eval_score, eval_loss = evaluate(model, criterion, postprocessors, val_loader, result_json_path, logger=logger, alpha=opt.ec_alpha, device=opt.device, debug=opt.debug)
-            if opt.caption_decoder_type == 'none':
+            if opt.caption_decoder_type == 'none':  #验证时参考指标为F1值
                 current_score = 2./(1./eval_score['Precision'] + 1./eval_score['Recall'])
             else:
-                if opt.criteria_for_best_ckpt == 'dvc':
+                if opt.criteria_for_best_ckpt == 'dvc':#验证时参考指标为METEOR和SODA_C
                     current_score = np.array(eval_score['METEOR']).mean() + np.array(eval_score['soda_c']).mean()
                 else:
                     current_score = np.array(eval_score['para_METEOR']).mean() + np.array(eval_score['para_CIDEr']).mean() + np.array(eval_score['para_Bleu_4']).mean()
 
-            # add to tf summary
+                    # add to tf summary
             for key in eval_score.keys():
                 tf_writer.add_scalar(key, np.array(eval_score[key]).mean(), iteration)
 
@@ -300,6 +306,7 @@ def train(opt):
         torch.cuda.empty_cache()
         # Stop criterion
         if epoch >= opt.epoch:
+ #       if epoch >= 60:
             tf_writer.close()
             break
 
@@ -314,4 +321,5 @@ if __name__ == '__main__':
         torch.backends.cudnn.enabled = False
 
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'True' # to avoid OMP problem on macos
+    print(opt.epoch)
     train(opt)

@@ -11,4 +11,5 @@ if not os.path.exists(out_path):
 d = h5py.File(in_path)
 for key in d.keys():
     v_d = d[key]['c3d_features'][:].astype('float32')
+   # print(d[key]['c3d_features'][()])
     np.save(os.path.join(out_path, key+'.npy'), v_d)

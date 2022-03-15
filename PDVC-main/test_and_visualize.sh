@@ -5,10 +5,10 @@ export PYTHONPATH=$PYTHONPATH:$curdir/video_backbone/TSP/data
 export PYTHONPATH=$PYTHONPATH:$curdir/video_backbone/TSP/extract_features
 export PYTHONPATH=$PYTHONPATH:$curdir/visualization
 
-DATA_PATH=$1 # path of the raw video folder
-OUTPUT_FOLDER=$2 # path of the output folder to save generated captions
-PDVC_MODEL_PATH=$3
-OUTPUT_LANGUAGE=$4
+DATA_PATH=visualization/videos # path of the raw video folder
+OUTPUT_FOLDER=visualization/output # path of the output folder to save generated captions
+PDVC_MODEL_PATH=save/anet_tsp_pdvc/model-best.pth
+OUTPUT_LANGUAGE=en
 
 if [ -z "$DATA_PATH" ]; then
     echo "DATA_PATH variable is not set."

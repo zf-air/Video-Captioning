@@ -10,6 +10,9 @@ from PIL import Image, ImageFont, ImageDraw
 import pdb
 import argparse
 import os
+
+os.environ['CUDA_VISIBLE_DEVICES']= '1'
+
 from tqdm import tqdm
 
 

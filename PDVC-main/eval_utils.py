@@ -91,9 +91,9 @@ def get_topn_from_dvcjson(dvc_json, out_json, top_n=3, ranking_key='proposal_sco
     bad_vid = 0
     for video_name in all_names:
         info = data[video_name]
-        new_info = sorted(info, key=lambda x: x[ranking_key], reverse=True)
+        new_info = sorted(info, key=lambda x: x[ranking_key], reverse=True)   #用proposal_score排序，从大到小
         new_info = [p for p in new_info if p[ranking_key] > score_thres]
-        new_info = new_info[:top_n]
+        new_info = new_info[:top_n]         #选取前top_n个
         out['results'][video_name] = new_info
         num += len(new_info)
         if len(new_info) == 0:
@@ -107,8 +107,7 @@ def get_topn_from_dvcjson(dvc_json, out_json, top_n=3, ranking_key='proposal_sco
 
 
 def eval_metrics(dvc_filename, gt_filenames, para_gt_filenames, alpha=0.3, ranking_key='proposal_score', rerank=False, dvc_eval_version='2018'):
-    score = collections.defaultdict(lambda: -1)
-
+    score = collections.defaultdict(lambda: -1)  #得到验证分数
     # top_n = 3
     # top_n_filename = dvc_filename + '.top{}.json'.format(top_n)
     # get_topn_from_dvcjson(dvc_filename, top_n_filename, top_n=top_n, ranking_key=ranking_key)
@@ -129,7 +128,7 @@ def eval_metrics(dvc_filename, gt_filenames, para_gt_filenames, alpha=0.3, ranki
     return score
 
 
-def save_dvc_json(out_json, path):
+def save_dvc_json(out_json, path):    #将视频数目和平均提议数量加入进去
     with open(path, 'w') as f:
         out_json['valid_video_num'] = len(out_json['results'])
         out_json['avg_proposal_num'] = np.array([len(v) for v in out_json['results'].values()]).mean().item()
@@ -146,10 +145,10 @@ def reranking(p_src, alpha, temperature):
             joint_score = alpha * (np.array(sent_scores)) + (np.array(prop_score))
         for i,p in enumerate(v):
             p['joint_score'] = joint_score[i]
-        v = sorted(v, key=lambda x: x['joint_score'], reverse=True)
-        topN = v[0]['pred_event_count']
+        v = sorted(v, key=lambda x: x['joint_score'], reverse=True)  #根据联合分数进行排序  从大到小
+        topN = v[0]['pred_event_count']   #选出联合分数最高的前N个子动作，N为视频子动作的数量
         v = v[:topN]
-        v = sorted(v, key=lambda x: x['timestamp'])
+        v = sorted(v, key=lambda x: x['timestamp'])   #按照时间区间的起始时间开始排序，起始时间相同则看结束时间
         d['results'][k] = v
     save_path = p_src+'_rerank_alpha{}_temp{}.json'.format(alpha, temperature)
     save_dvc_json(d, save_path)
@@ -179,6 +178,9 @@ def evaluate(model, criterion, postprocessors, loader, dvc_json_path, logger=Non
             orig_target_sizes = dt['video_length'][:, 1]
 
             weight_dict = criterion.weight_dict
+            # loss type: dict_keys(['loss_ce', 'loss_bbox', 'loss_giou', 'loss_counter', 'loss_caption', 'loss_ce_0',
+            # 'loss_bbox_0', 'loss_giou_0', 'loss_counter_0', 'loss_caption_0'])
+            # loss weights: dict_values([2, 0, 4, 0.5, 2, 2, 0, 4, 0.5, 2])
             final_loss = sum(loss[k] * weight_dict[k] for k in loss.keys() if k in weight_dict)
 
             for loss_k, loss_v in loss.items():
@@ -196,12 +198,12 @@ def evaluate(model, criterion, postprocessors, loader, dvc_json_path, logger=Non
                     {
                         "timestamp": segment[pid].tolist(),
                         "raw_box": raw_boxes[pid].tolist(),
-                        "proposal_score": results[idx]['scores'][pid].item(),
-                        "sentence": results[idx]['captions'][pid],
-                        "sentence_score": results[idx]['caption_scores'][pid],
+                        "proposal_score": results[idx]['scores'][pid].item(),   #计算方法
+                        "sentence": results[idx]['captions'][pid],              #查看
+                        "sentence_score": results[idx]['caption_scores'][pid],  #计算方法
                         'query_id': results[idx]['query_id'][pid].item(),
                         'vid_duration': results[idx]['vid_duration'].item(),
-                        'pred_event_count': results[idx]['pred_seq_len'].item(),
+                        'pred_event_count': results[idx]['pred_seq_len'].item(),   #计算方法
                     }
                     for pid in range(len(segment)) if results[idx]['scores'][pid].item() > score_threshold]
             out_json['results'].update(batch_json)
@@ -216,14 +218,21 @@ def evaluate(model, criterion, postprocessors, loader, dvc_json_path, logger=Non
     for k in loss_sum.keys():
         loss_sum[k] = np.round(loss_sum[k] / (len(loader) + 1e-5), 3).item()
     logger.info('loss: {}'.format(loss_sum))
+    print("参数4:", opt.gt_file_for_eval)   #测试json文件地址不对，不该是验证json文件地址
     scores = eval_metrics(dvc_json_path,
-                          gt_filenames=opt.gt_file_for_eval,
+                          gt_filenames=['data/workoutuow18/captiondata/test.json'],
                           para_gt_filenames=opt.gt_file_for_para_eval,
                           alpha=alpha,
                           rerank=(opt.count_loss_coef > 0),
                           dvc_eval_version=dvc_eval_version
                           )
-
+#    scores = eval_metrics(dvc_json_path,
+#                          gt_filenames=opt.gt_file_for_eval,
+#                          para_gt_filenames=opt.gt_file_for_para_eval,
+#                          alpha=alpha,
+#                          rerank=(opt.count_loss_coef > 0),
+#                          dvc_eval_version=dvc_eval_version
+#                          )
     out_json.update(scores)
     save_dvc_json(out_json, dvc_json_path)
     return scores, loss_sum
