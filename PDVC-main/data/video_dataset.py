@@ -363,7 +363,7 @@ def get_feats(key, vf_type, vf_folder, data_norm=False):
         path = os.path.join(vf_folder, key[:13] + '_flow.npy')
     elif vf_type == 'tsp':
         feat_dim = 512
-        path = os.path.join(vf_folder, key[0:16] + '.npy')  #修改
+        path = os.path.join(vf_folder, key[0:13] + '.npy')
     elif vf_type == 'vggish':
         feat_dim = 128
         path = os.path.join(vf_folder, key[0:13] + '.npy')

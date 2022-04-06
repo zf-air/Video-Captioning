@@ -20,24 +20,20 @@ def parse_opts():
 
     #  ***************************** INPUT DATA PATH *****************************
     parser.add_argument('--train_caption_file', type=str,
-                        default='data/workoutuow18/captiondata/train.json', help='')  #进行一下修改，调试使用
+                        default='data/anet/captiondata/train_modified.json', help='')
     parser.add_argument('--invalid_video_json', type=str, nargs='+', default=[])
-    parser.add_argument('--val_caption_file', type=str, default='data/workoutuow18/captiondata/valid.json') #更改为测试
-#    parser.add_argument('--test_caption_file', type=str, default='data/workoutuow18/captiondata/test.json')
-    parser.add_argument('--visual_feature_folder', type=str, default='data/workoutuow18/features/tsp') #在yml文件中修改
-    parser.add_argument('--gt_file_for_auc', type=str, nargs='+', default='data/workoutuow18/captiondata/test.json')
-#    parser.add_argument('--gt_file_for_eval', type=str, nargs='+', default=['data/workoutuow18/captiondata/valid.json', 'data/workoutuow18/captiondata/test.json'])
-    parser.add_argument('--gt_file_for_eval', type=str, nargs='+', default=['data/workoutuow18/captiondata/valid.json'])
-#    parser.add_argument('--gt_file_for_test', type=str, nargs='+', default=['data/workoutuow18/captiondata/test.json'])
+    parser.add_argument('--val_caption_file', type=str, default='data/anet/captiondata/val_1.json')
+    parser.add_argument('--visual_feature_folder', type=str, default='data/anet/resnet_bn')
+    parser.add_argument('--gt_file_for_auc', type=str, nargs='+', default='data/anet/captiondata/val_all.json')
+    parser.add_argument('--gt_file_for_eval', type=str, nargs='+', default=['data/anet/captiondata/val_1.json', 'data/anet/captiondata/val_2.json'])
     parser.add_argument('--gt_file_for_para_eval', type=str, nargs='+', default= ['data/anet/captiondata/para/anet_entities_val_1_para.json', 'data/anet/captiondata/para/anet_entities_val_2_para.json'])
-    parser.add_argument('--dict_file', type=str, default='data/workoutuow18/vocabulary_workoutuow18.json', help='')
+    parser.add_argument('--dict_file', type=str, default='data/anet/vocabulary_activitynet.json', help='')
     parser.add_argument('--criteria_for_best_ckpt', type=str, default='dvc', choices=['dvc', 'pc'], help='for dense video captioning, use soda_c + METEOR as the criteria'
                                                                                                          'for paragraph captioning, choose the best para_METEOR+para_CIDEr+para_BLEU4')
 
     parser.add_argument('--visual_feature_type', type=str, default='c3d', choices=['c3d', 'resnet_bn', 'resnet'])
     parser.add_argument('--feature_dim', type=int, default=500, help='dim of frame-level feature vector')
 
- #   parser.add_argument('--start_from', type=str, default='workoutuow18_tsp_pdvc', help='id of the run with incompleted training')
     parser.add_argument('--start_from', type=str, default='', help='id of the run with incompleted training')
     parser.add_argument('--start_from_mode', type=str, choices=['best', 'last'], default="last")
     parser.add_argument('--pretrain', type=str, choices=['full', 'encoder', 'decoder'])
@@ -57,7 +53,7 @@ def parse_opts():
 
 
     #  ***************************** Caption Decoder  *****************************
-    parser.add_argument('--vocab_size', type=int, default=148)  #需要修改为自己词表的大小
+    parser.add_argument('--vocab_size', type=int, default=5747)
     parser.add_argument('--wordRNN_input_feats_type', type=str, default='C', choices=['C', 'E', 'C+E'],
                         help='C:clip-level features, E: event-level features, C+E: both')
     parser.add_argument('--caption_decoder_type', type=str, default="light",
@@ -69,7 +65,7 @@ def parse_opts():
                         help='the encoding size of each token in the vocabulary')
     parser.add_argument('--att_hid_size', type=int, default=512, help='the hidden size of the attention MLP')
     parser.add_argument('--drop_prob', type=float, default=0.5, help='strength of dropout in the Language Model RNN')
-    parser.add_argument('--max_caption_len', type=int, default=40, help='')  #修改为40
+    parser.add_argument('--max_caption_len', type=int, default=30, help='')
 
     #  ***************************** Transformer  *****************************
     parser.add_argument('--hidden_dim', type=int, default=512)
@@ -91,7 +87,7 @@ def parse_opts():
     parser.add_argument('--eos_coef', default=0.1, type=float,
                         help="Relative classification weight of the no-object class")
     parser.add_argument('--num_classes', type=int, default=1)
-    parser.add_argument('--dalayers', type=int, default=6)
+    parser.add_argument('--dec_layers', type=int, default=6)
     parser.add_argument('--enc_layers', type=int, default=6)
     parser.add_argument('--transformer_ff_dim', type=int, default=2048)
     parser.add_argument('--transformer_dropout_prob', type=float, default=0.1)
@@ -102,7 +98,7 @@ def parse_opts():
 
     #  ***************************** OPTIMIZER *****************************
     parser.add_argument('--training_scheme', type=str, default='all', choices=['cap_head_only', 'no_cap_head', 'all'])
-    parser.add_argument('--epoch', type=int, default=60)  #原先为30
+    parser.add_argument('--epoch', type=int, default=30)
     parser.add_argument('--batch_size', type=int, default=1, help='batch_size')
     parser.add_argument('--batch_size_for_eval', type=int, default=1, help='')
     parser.add_argument('--grad_clip', type=float, default=100., help='clip gradients at this value')

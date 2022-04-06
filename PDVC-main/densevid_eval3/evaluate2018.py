@@ -268,7 +268,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--submission', type=str,  default='sample_submission.json',
                         help='sample submission file for ActivityNet Captions Challenge.')
     parser.add_argument('-r', '--references', type=str, nargs='+',
-                        default=['data/workoutuow18/captiondata/test.json'],
+                        default=['data/val_1.json', 'data/val_2.json'],
                         help='reference files with ground truth captions to compare results against. delimited (,) str')
     parser.add_argument('--tious', type=float, nargs='+', default=[0.3, 0.5, 0.7, 0.9],
                         help='Choose the tIoUs to average over.')

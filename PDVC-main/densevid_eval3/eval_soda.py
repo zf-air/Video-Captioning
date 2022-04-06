@@ -61,7 +61,7 @@ if __name__ == '__main__':
     for p in [p_new, p_vitr]:
         print('\n')
         print(p)
-        ref_list = ['data/anet/captiondata/valid.json', 'data/anet/captiondata/test.json']
+        ref_list = ['data/anet/captiondata/val_1.json', 'data/anet/captiondata/val_2.json']
         score=eval_soda(p, ref_list, verbose=False)
         print(score)
         para_score = get_para_score(p, referneces=['../data/anet/captiondata/para/anet_entities_val_1_para.json', '../data/anet/captiondata/para/anet_entities_val_2_para.json'])

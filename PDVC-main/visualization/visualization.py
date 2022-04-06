@@ -15,7 +15,6 @@ os.environ['CUDA_VISIBLE_DEVICES']= '1'
 
 from tqdm import tqdm
 
-
 def get_frame_caption(frame_time, dense_captions, ranking=False):
     frame_captions = []
     idx_list = []

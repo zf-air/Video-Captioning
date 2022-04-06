@@ -5,9 +5,6 @@ from __future__ import print_function
 import argparse
 import json
 import os
-
-os.environ['CUDA_VISIBLE_DEVICES']= '1'
-
 import sys
 import torch
 import numpy as np
@@ -33,22 +30,22 @@ def create_fake_test_caption_file(metadata_csv_path):
     df = pd.read_csv(metadata_csv_path)
     for i, row in df.iterrows():
         out[basename(row['filename']).split('.')[0]] = {'duration': row['video-duration'], "timestamps": [[0, 0.5]], "sentences":["None"]}
-    fake_test_json = '.fake_test_json.tmp'     #修改这个地方，可能可以使用test.json
+    fake_test_json = '.fake_test_json.tmp'
     json.dump(out, open(fake_test_json, 'w'))
     return fake_test_json
 
 def main(opt):
-    folder_path = os.path.join(opt.eval_save_dir, opt.eval_folder)  #找到需要验证的模型文件
+    folder_path = os.path.join(opt.eval_save_dir, opt.eval_folder)
     if opt.eval_mode == 'test':
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
-    logger = create_logger(folder_path, 'val.log')   #创建验证日志
+    logger = create_logger(folder_path, 'val.log')
     if opt.eval_model_path:
         model_path = opt.eval_model_path
         infos_path = os.path.join('/'.join(opt.eval_model_path.split('/')[:-1]), 'info.json')
     else:
-        model_path = os.path.join(folder_path, 'model-best.pth')  #修改
-        infos_path = os.path.join(folder_path, 'info.json')    #确定验证模型和信息文件
+        model_path = os.path.join(folder_path, 'model-best.pth')
+        infos_path = os.path.join(folder_path, 'info.json')
 
     logger.info(vars(opt))
 
@@ -67,19 +64,16 @@ def main(opt):
     # Create the Data Loader instance
 
     if opt.eval_mode == 'test':
-        opt.eval_caption_file = create_fake_test_caption_file(opt.test_video_meta_data_csv_path)    #尝试修改
+        opt.eval_caption_file = create_fake_test_caption_file(opt.test_video_meta_data_csv_path)
         opt.visual_feature_folder = opt.test_video_feature_folder
 
-#    val_dataset = PropSeqDataset(opt.eval_caption_file,
-#                                 opt.visual_feature_folder,
- #                                opt.dict_file, False, opt.eval_proposal_type,
-#                                 opt)   #改成test.json
     val_dataset = PropSeqDataset(opt.eval_caption_file,
                                  opt.visual_feature_folder,
-                                 opt.dict_file, False, 'gt',
+                                 opt.dict_file, False, opt.eval_proposal_type,
                                  opt)
     loader = DataLoader(val_dataset, batch_size=opt.batch_size_for_eval,
                         shuffle=False, num_workers=opt.nthreads, collate_fn=collate_fn)
+
 
     model, criterion, postprocessors = build(opt)
     model.translator = val_dataset.translator
@@ -112,15 +106,15 @@ def main(opt):
         caption_scores, eval_loss = evaluate(model, criterion, postprocessors, loader, out_json_path,
                          logger, alpha=opt.ec_alpha, dvc_eval_version=opt.eval_tool_version, device=opt.eval_device, debug=False, skip_lang_eval=False)
         avg_eval_score = {key: np.array(value).mean() for key, value in caption_scores.items() if key !='tiou'}
-        avg_eval_score2 = {key: np.array(value).mean() * 324 / len(loader.dataset) for key, value in caption_scores.items() if key != 'tiou'}
+        avg_eval_score2 = {key: np.array(value).mean() * 4917 / len(loader.dataset) for key, value in caption_scores.items() if key != 'tiou'}
 
         logger.info(
-            '\nValidation result based on all 324 test videos:\n {}\n avg_score:\n{}'.format(
+            '\nValidation result based on all 4917 val videos:\n {}\n avg_score:\n{}'.format(
                                                                                        caption_scores.items(),
                                                                                        avg_eval_score))
 
         logger.info(
-                '\nValidation result based on {} available test videos:\n avg_score:\n{}'.format(len(loader.dataset),
+                '\nValidation result based on {} available val videos:\n avg_score:\n{}'.format(len(loader.dataset),
                                                                                            avg_eval_score2))
 
     logger.info('saving reults json to {}'.format(out_json_path))
@@ -129,18 +123,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--eval_save_dir', type=str, default='save')
     parser.add_argument('--eval_mode', type=str, default='eval', choices=['eval', 'test'])
-    parser.add_argument('--test_video_feature_folder', type=str, nargs='+', default='data/workoutuow18/features/tsp')
-    parser.add_argument('--test_video_meta_data_csv_path', type=str, default='data/workoutuow18/features/WorkoutUOW18_test_metadata.csv')
+    parser.add_argument('--test_video_feature_folder', type=str, nargs='+', default=None)
+    parser.add_argument('--test_video_meta_data_csv_path', type=str, default=None)
     parser.add_argument('--eval_folder', type=str, required=True)
     parser.add_argument('--eval_model_path', type=str, default='')
     parser.add_argument('--eval_tool_version', type=str, default='2018', choices=['2018', '2021'])
-    parser.add_argument('--eval_caption_file', type=str, default='data/workoutuow18/captiondata/test.json')
-    parser.add_argument('--visual_feature_folder', type=str, default='data/workoutuow18/features/tsp') #
-    parser.add_argument('--dict_file', type=str, default='data/workoutuow18/vocabulary_workoutuow18.json') #
-    #parser.add_argument('--test_caption_file', type=str, default='data/workoutuow18/captiondata/test.json')
+    parser.add_argument('--eval_caption_file', type=str, default='data/anet/captiondata/val_1.json')
     parser.add_argument('--eval_proposal_type', type=str, default='gt')
     parser.add_argument('--eval_transformer_input_type', type=str, default='queries', choices=['gt_proposals', 'queries'])
-    parser.add_argument('--gpu_id', type=str, nargs='+', default=['1'])
+    parser.add_argument('--gpu_id', type=str, nargs='+', default=['0'])
     parser.add_argument('--eval_device', type=str, default='cuda')
     opt = parser.parse_args()
 
